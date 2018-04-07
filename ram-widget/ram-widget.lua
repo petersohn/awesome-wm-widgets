@@ -1,6 +1,11 @@
 local awful = require("awful")
 local watch = require("awful.widget.watch")
 local wibox = require("wibox")
+local beautiful = require("beautiful")
+
+local popup_placement = beautiful.memory_widget_popup_placement or function(w)
+    return awful.placement.top_right(w, { margins = {top = 25, right = 10}})
+end
 
 --- Main ram widget shown on wibar
 local ramgraph_widget = wibox.widget {
@@ -62,7 +67,7 @@ watch('bash -c "free | grep Mem"', 1,
 ramgraph_widget:buttons(
     awful.util.table.join(
         awful.button({}, 1, function()
-            awful.placement.top_right(w, { margins = {top = 25, right = 10}})
+            popup_placement(w)
             w.pie.data_list = {
                 {'used ' .. getPercentage(used), used},
                 {'free ' .. getPercentage(free), free},

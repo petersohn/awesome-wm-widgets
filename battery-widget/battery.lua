@@ -12,6 +12,7 @@ local awful = require("awful")
 local naughty = require("naughty")
 local watch = require("awful.widget.watch")
 local wibox = require("wibox")
+local beautiful = require("beautiful")
 
 -- acpi sample outputs
 -- Battery 0: Discharging, 75%, 01:51:38 remaining
@@ -19,6 +20,8 @@ local wibox = require("wibox")
 
 local PATH_TO_ICONS = "/usr/share/icons/Arc/status/symbolic/"
 local HOME = os.getenv("HOME")
+local popup_position = beautiful.battery_widget_popup_position or "top_right"
+local warning_position = beautiful.battery_widget_warning_position or "bottom_right"
 
 local battery_widget = wibox.widget {
     {
@@ -39,6 +42,7 @@ local function show_battery_status()
                 text =  stdout,
                 title = "Battery status",
                 timeout = 5, hover_timeout = 0.5,
+                position = popup_position,
                 width = 200,
             }
         end
@@ -60,7 +64,7 @@ local function show_battery_warning()
         text = "Huston, we have a problem",
         title = "Battery is dying",
         timeout = 5, hover_timeout = 0.5,
-        position = "bottom_right",
+        position = warning_position,
         bg = "#F06060",
         fg = "#EEE9EF",
         width = 300,
