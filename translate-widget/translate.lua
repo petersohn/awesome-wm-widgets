@@ -12,8 +12,10 @@ local https = require("ssl.https")
 local json = require("json")
 local naughty = require("naughty")
 local wibox = require("wibox")
+local gears = require("gears")
+local gfs = require("gears.filesystem")
+local secrets = require("awesome-wm-widgets.secrets")
 
-local API_KEY = '<your api key>'
 local BASE_URL = 'https://translate.yandex.net/api/v1.5/tr.json/translate'
 local ICON = '/usr/share/icons/Papirus-Dark/48x48/apps/gnome-translate.svg'
 
@@ -41,11 +43,16 @@ end
 
 local w = wibox {
     width = 300,
+    border_width = 1,
+    border_color = '#66ccff',
     ontop = true,
-    screen = mouse.screen,
     expand = true,
     bg = '#1e252c',
-    max_widget_size = 500
+    max_widget_size = 500,
+    shape = function(cr, width, height)
+        gears.shape.rounded_rect(cr, width, height, 3)
+    end
+
 }
 
 w:setup {
@@ -81,7 +88,7 @@ w:setup {
 --- Main function - takes the user input and shows the widget with translation
 -- @param request_string - user input (dog enfr)
 local function translate(to_translate, lang)
-    local urll = BASE_URL .. '?lang=' .. lang .. '&text=' .. urlencode(to_translate) .. '&key=' .. API_KEY
+    local urll = BASE_URL .. '?lang=' .. lang .. '&text=' .. urlencode(to_translate) .. '&key=' .. secrets.translate_widget_api_key
 
     local resp_json, code = https.request(urll)
     if (code == 200 and resp_json ~= nil) then
@@ -140,6 +147,11 @@ local input_widget = wibox {
     bg = '#1e252c',
     max_widget_size = 500,
     border_width = 1;
+    border_width = 1,
+    border_color = '#66ccff',
+    shape = function(cr, width, height)
+        gears.shape.rounded_rect(cr, width, height, 3)
+    end
 }
 
 local prompt = awful.widget.prompt()
@@ -151,13 +163,14 @@ input_widget:setup {
 }
 
 local function show_translate_prompt()
-    awful.placement.top(input_widget, { margins = {top = 40}})
+    awful.placement.top(input_widget, { margins = {top = 40}, parent = awful.screen.focused()})
     input_widget.height = 40
     input_widget.visible = true
 
     awful.prompt.run {
         prompt = "<b>Translate</b>: ",
         textbox = prompt.widget,
+        history_path = gfs.get_dir('cache') .. '/translate_history',
         bg_cursor = '#66ccff',
         exe_callback = function(text)
             if not text or #text == 0 then return end

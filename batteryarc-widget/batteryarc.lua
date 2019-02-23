@@ -38,11 +38,43 @@ local batteryarc = wibox.widget {
 -- mirror the widget, so that chart value increases clockwise
 local batteryarc_widget = wibox.container.mirror(batteryarc, { horizontal = true })
 
-watch("acpi", 10,
+local last_battery_check = os.time()
+
+watch("acpi -i", 10,
     function(widget, stdout, stderr, exitreason, exitcode)
         local batteryType
-        local _, status, charge_str, time = string.match(stdout, '(.+): (%a+), (%d?%d%d)%%,? ?.*')
-        local charge = tonumber(charge_str)
+
+        local battery_info = {}
+        local capacities = {}
+        for s in stdout:gmatch("[^\r\n]+") do
+            local status, charge_str, time = string.match(s, '.+: (%a+), (%d?%d?%d)%%,?.*')
+            if string.match(s, 'rate information') then
+                -- ignore such line
+            elseif status ~= nil then
+                table.insert(battery_info, {status = status, charge = tonumber(charge_str)})
+            else
+                local cap_str = string.match(s, '.+:.+last full capacity (%d+)')
+                table.insert(capacities, tonumber(cap_str))
+            end
+        end
+
+        local capacity = 0
+        for i, cap in ipairs(capacities) do
+            capacity = capacity + cap
+        end
+
+        local charge = 0
+        local status
+        for i, batt in ipairs(battery_info) do
+            if batt.charge >= charge then
+                status = batt.status -- use most charged battery status
+                -- this is arbitrary, and maybe another metric should be used
+            end
+
+            charge = charge + batt.charge * capacities[i]
+        end
+        charge = charge / capacity
+
         widget.value = charge / 100
         if status == 'Charging' then
             mirrored_text_with_background.bg = beautiful.widget_green
@@ -52,9 +84,14 @@ watch("acpi", 10,
             mirrored_text_with_background.fg = beautiful.widget_main_color
         end
 
+        text.text = string.format('%d', charge)
+
         if charge < 15 then
             batteryarc.colors = { beautiful.widget_red }
-            if status ~= 'Charging' then
+            if status ~= 'Charging' and os.difftime(os.time(), last_battery_check) > 300 then
+                -- if 5 minutes have elapsed since the last warning
+                last_battery_check = time()
+
                 show_battery_warning()
             end
         elseif charge > 15 and charge < 40 then
@@ -62,7 +99,6 @@ watch("acpi", 10,
         else
             batteryarc.colors = { beautiful.widget_main_color }
         end
-        text.text = charge
     end,
     batteryarc)
 

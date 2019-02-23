@@ -8,6 +8,8 @@ or with separators
 
 ![screenshot](./screenshot_with_sprtrs.png)
 
+Some more screenshots in this reddit [post](https://www.reddit.com/r/unixporn/comments/8qijmx/awesomewm_dark_theme/)
+
 From left to right:
 
 - [spotify-widget](https://github.com/streetturtle/AwesomeWM/tree/master/spotify-widget) / [rhythmbox-widget](https://github.com/streetturtle/AwesomeWM/tree/master/rhythmbox-widget)
@@ -22,7 +24,8 @@ From left to right:
 - [battery-widget](https://github.com/streetturtle/AwesomeWM/tree/master/battery-widget)
 - [ram-widget](https://github.com/streetturtle/AwesomeWM/tree/master/ram-widget)
 - [translate-widget](https://github.com/streetturtle/AwesomeWM/tree/master/translate-widget) (not on the screenshot)
-- [spotify-shell](https://github.com/streetturtle/AwesomeWM/tree/master/spotify-shell)
+- [spotify-shell](https://github.com/streetturtle/AwesomeWM/tree/master/spotify-shell) (not on the screenshot)
+- [run-shell](https://github.com/streetturtle/AwesomeWM/tree/master/run-shell) (not on the screenshot)
 
 Some of these widgets use [Arc icon theme](https://github.com/horst3180/arc-icon-theme) by default but it could be easily 
 changed to any other icon theme or custom icons. If you want to have separators between widgets like on the screenshot create text widget with ` : ` and place it between widgets:

@@ -10,9 +10,10 @@ local http = require("socket.http")
 local json = require("json")
 local naughty = require("naughty")
 local wibox = require("wibox")
+local gears = require("gears")
 
-local city = os.getenv("AWW_WEATHER_CITY") or "Montreal,ca"
-local open_map_key = os.getenv("AWW_WEATHER_API_KEY") or 'c3d7320b359da4e48c2d682a04076576'
+local secrets = require("awesome-wm-widgets.secrets")
+
 local path_to_icons = "/usr/share/icons/Arc/status/symbolic/"
 
 local icon_widget = wibox.widget {
@@ -21,7 +22,7 @@ local icon_widget = wibox.widget {
         resize = false,
         widget = wibox.widget.imagebox,
     },
-    layout = wibox.container.margin(brightness_icon, 0, 0, 3),
+    layout = wibox.container.margin(_ , 0, 0, 3),
     set_image = function(self, path)
         self.icon.image = path
     end,
@@ -38,7 +39,7 @@ local weather_widget = wibox.widget {
     layout = wibox.layout.fixed.horizontal,
 }
 
--- helps to map openWeatherMap icons to Arc icons
+--- Maps openWeatherMap icons to Arc icons
 local icon_map = {
     ["01d"] = "weather-clear-symbolic.svg",
     ["02d"] = "weather-few-clouds-symbolic.svg",
@@ -60,13 +61,8 @@ local icon_map = {
     ["50n"] = "weather-fog-symbolic.svg"
 }
 
--- handy function to convert temperature from Kelvin to Celcius
-function to_celcius(kelvin)
-    return math.floor(tonumber(kelvin) - 273.15)
-end
-
--- Return wind direction as a string.
-function to_direction(degrees)
+--- Return wind direction as a string.
+local function to_direction(degrees)
     -- Ref: https://www.campbellsci.eu/blog/convert-wind-directions
     if degrees == nil then
         return "Unknown dir"
@@ -93,21 +89,33 @@ function to_direction(degrees)
     return directions[math.floor((degrees % 360) / 22.5) + 1]
 end
 
-local weather_timer = timer({ timeout = 60 })
+local weather_timer = gears.timer({ timeout = 60 })
 local resp
 
 weather_timer:connect_signal("timeout", function ()
-    local resp_json = http.request("https://api.openweathermap.org/data/2.5/weather?q=" .. city .."&appid=" .. open_map_key)
-    if (resp_json ~= nil) then
+    local resp_json, status = http.request('https://api.openweathermap.org/data/2.5/weather?q='
+            .. secrets.weather_widget_city
+            .. '&appid=' .. secrets.weather_widget_api_key
+            .. '&units=' .. secrets.weather_widget_units)
+    if (status ~= 200 and resp_json ~= nil) then
+        local err_resp = json.decode(resp_json)
+        naughty.notify{
+            title = 'Weather Widget Error',
+            text = err_resp.message,
+            preset = naughty.config.presets.critical,
+        }
+    elseif (resp_json ~= nil) then
         resp = json.decode(resp_json)
         icon_widget.image = path_to_icons .. icon_map[resp.weather[1].icon]
-        temp_widget:set_text(to_celcius(resp.main.temp) .. "°C")
+        temp_widget:set_text(string.gsub(resp.main.temp, "%.%d+", "")
+                .. '°'
+                .. (secrets.weather_widget_units == 'metric' and 'C' or 'F'))
     end
 end)
 weather_timer:start()
 weather_timer:emit_signal("timeout")
 
--- Notification with weather information. Popups when mouse hovers over the icon
+--- Notification with weather information. Popups when mouse hovers over the icon
 local notification
 weather_widget:connect_signal("mouse::enter", function()
     notification = naughty.notify{
@@ -116,14 +124,16 @@ weather_widget:connect_signal("mouse::enter", function()
         text =
             '<big>' .. resp.weather[1].main .. ' (' .. resp.weather[1].description .. ')</big><br>' ..
             '<b>Humidity:</b> ' .. resp.main.humidity .. '%<br>' ..
-            '<b>Temperature: </b>' .. to_celcius(resp.main.temp) .. '<br>' ..
-            '<b>Pressure: </b>' .. resp.main.pressure .. 'hPa<br>' ..
-            '<b>Clouds: </b>' .. resp.clouds.all .. '%<br>' ..
-            '<b>Wind: </b>' .. resp.wind.speed .. 'm/s (' .. to_direction(resp.wind.deg) .. ')',
+            '<b>Temperature:</b> ' .. resp.main.temp .. '°'
+                    .. (secrets.weather_widget_units == 'metric' and 'C' or 'F') .. '<br>' ..
+            '<b>Pressure:</b> ' .. resp.main.pressure .. 'hPa<br>' ..
+            '<b>Clouds:</b> ' .. resp.clouds.all .. '%<br>' ..
+            '<b>Wind:</b> ' .. resp.wind.speed .. 'm/s (' .. to_direction(resp.wind.deg) .. ')',
         timeout = 5, hover_timeout = 10,
         width = 200
     }
 end)
+
 weather_widget:connect_signal("mouse::leave", function()
     naughty.destroy(notification)
 end)
